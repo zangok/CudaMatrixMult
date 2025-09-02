@@ -1,6 +1,75 @@
-*.i
-*.ii
-*.gpu
-*.ptx
+# -------------------------
+# Visual Studio / IDE
+# -------------------------
+.vs/                    # VS workspace, cache, CodeLens
+.CudaMatrixMult/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+*.VC.ipch
+*.ipch/
+*.iobj
+*.ipdb
+*.tlog/
+*.lastbuildstate
+*.ncb
+*.sdf
+*.opensdf
+*.opendb
+*.code-workspace
+*.cdb
+*.json
+
+# -------------------------
+# Build / output directories
+# -------------------------
+Debug/
+Release/
+x64/Debug/
+x64/Release/
+cmake-build-*/
+
+# -------------------------
+# CUDA compiled artifacts
+# -------------------------
 *.cubin
+*.ptx
 *.fatbin
+*.nvvp
+*.nvprof
+*.nvvp_log
+
+# -------------------------
+# CMake / Makefile
+# -------------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+Makefile
+
+# -------------------------
+# Temporary / system files
+# -------------------------
+*.log
+*.swp
+*.DS_Store
+*.tmp
+*.bak
+*.old
+
+# -------------------------
+# Binaries / libraries
+# -------------------------
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.dll
+*.exe
+*.out
+/.vs/CudaMatrixMult
