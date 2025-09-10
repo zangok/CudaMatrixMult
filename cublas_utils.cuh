@@ -42,7 +42,6 @@
 
 typedef __nv_bfloat16 bf16;
 
-
  // CUDA API error checking
 #define CUDA_CHECK(err)                                                                            \
     do {                                                                                           \

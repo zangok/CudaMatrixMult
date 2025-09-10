@@ -12,6 +12,7 @@
 #include "utils.cuh"
 
 // A simple RAII-style wrapper for a 2D matrix allocated on the GPU.
+// Mostly to test using a matrix of float mean = 0.0f, float stddev = 1.0f
 template <typename T>
 class GpuMatrix {
 public:
@@ -35,7 +36,7 @@ public:
         }
     }
 
-    // The Rule of Five: Prevent accidental copies that would lead to a double-free error.
+    // Prevent accidental copies that would lead to a double-free error.
     GpuMatrix(const GpuMatrix&) = delete;
     GpuMatrix& operator=(const GpuMatrix&) = delete;
 
@@ -75,12 +76,7 @@ public:
 
         for (size_t i = 0; i < N; ++i) {
             float f = dist(gen);
-            if constexpr (std::is_same_v<T, __nv_bfloat16>) {
-                h_data[i] = __float2bfloat16(f);
-            }
-            else {
-                h_data[i] = static_cast<T>(f);
-            }
+            h_data[i] = convertAndFill<T>(f);
         }
 
         cudaMemcpy(d_data_, h_data.data(), sizeof(T) * N, cudaMemcpyHostToDevice);
@@ -98,4 +94,15 @@ private:
     T* d_data_ = nullptr; // Device pointer
     size_t numRows_;
     size_t numCols_;
+
+    // Generic conversion helper: works for float, double, etc.
+    template<typename U>
+    U convertAndFill(float f) {
+        return static_cast<U>(f);
+    }
+
+    template<>
+    __nv_bfloat16 convertAndFill<__nv_bfloat16>(float f) {
+        return __float2bfloat16(f);
+    }
 };

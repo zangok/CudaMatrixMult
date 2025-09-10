@@ -6,8 +6,10 @@
 #include <iostream>
 #include <cublasLt.h>
 #include <cublas_v2.h>
-#include "cublas_matmul.cu"
+#include "cublas_matmul.cuh"
 #include "GpuMatrix.h"
+#include "custom_matmul_1.cuh"
+#include "gemm_policy.h"
 
 // Define function signature for kernels
 template <typename T>
@@ -20,7 +22,9 @@ std::vector<std::pair<std::string, KernelFn<T>>> get_kernels();
 template <>
 std::vector<std::pair<std::string, KernelFn<bf16>>> get_kernels<bf16>() {
     return {
-        {"cuBLAS bf16 GEMM", runCublasMatmulBF16}
+        {"cuBLAS bf16 GEMM", runCublasMatmulBF16},
+        {"custom bf16 GEMM", runCustomMatmul<GemmPolicyBF16>}
+		
     };
 }
 
