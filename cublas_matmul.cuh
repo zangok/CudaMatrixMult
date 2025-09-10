@@ -1,7 +1,8 @@
-#include <cublasLt.h>
-#include "utils.cuh"
-#include "cublas_utils.h"
+//Taken from the example implementation project on github
+#pragma once
 #include <cuda_runtime.h>
+#include <cublasLt.h>
+#include "cublas_utils.cuh"
 
 // Random code snippets to use while development
 const size_t cublaslt_workspace_size = 32 * 1024 * 1024;
