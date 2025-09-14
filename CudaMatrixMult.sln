@@ -18,6 +18,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "policies", "policies", "{02
 		gemm_policy.h = gemm_policy.h
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "matmuls", "matmuls", "{5561DA70-8BC2-4554-BEDB-1BB233F76988}"
+	ProjectSection(SolutionItems) = preProject
+		custom_matmul_2.cuh = custom_matmul_2.cuh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

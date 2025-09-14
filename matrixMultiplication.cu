@@ -10,6 +10,8 @@
 #include "GpuMatrix.h"
 #include "custom_matmul_1.cuh"
 #include "gemm_policy.h"
+#include "custom_matmul_2.cuh"
+#include "mult_policy.h"
 
 // Define function signature for kernels
 template <typename T>
@@ -23,7 +25,8 @@ template <>
 std::vector<std::pair<std::string, KernelFn<bf16>>> get_kernels<bf16>() {
     return {
         {"cuBLAS bf16 GEMM", runCublasMatmulBF16},
-        {"custom bf16 GEMM", runCustomMatmul<GemmPolicyBF16>}
+        //{"custom bf16 GEMM", runCustomMatmul<GemmPolicyBF16>},
+		{"custom bf16 GEMM v2", runCustomMatmul2<GemmPolicyBF16>},
 		
     };
 }
@@ -48,6 +51,16 @@ void compare_matmul(int N, int M, int K, int iterations) {
 
     auto kernels = get_kernels<T>();
 
+	// Warmup
+    /*
+    const auto& kernel_pair_warmup = kernels.at(1);
+    const auto& kernel_name_warmup = kernel_pair_warmup.first;
+    auto kernel_fn_warmup = kernel_pair_warmup.second;
+
+    kernel_fn_warmup(N, M, K, A.data(), B.data(), C.data());
+    */
+
+	// Benchmark each kernel
     for (auto& kv : kernels) {
         const auto& kernel_name = kv.first;
         auto kernel_fn = kv.second;
@@ -77,6 +90,6 @@ int main() {
 
     initCublasLt();
 
-    compare_matmul<bf16>(4096, 4096, 4096, 1);
+    compare_matmul<bf16>(1024, 1024, 1024, 1);
 
 }
