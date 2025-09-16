@@ -29,7 +29,7 @@ void runCublasMatmulBF16(int M, int N, int K, bf16* A, bf16* B, bf16* C) {
     cublasLtMatmulPreference_t preference;
     cublasLtMatmulHeuristicResult_t heuristic;
 
-    cublasOperation_t opNoTranspose = CUBLAS_OP_N;
+    cublasOperation_t opNoTranspose = CUBLAS_OP_T;
     cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSA, &opNoTranspose, sizeof(opNoTranspose));
     cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &opNoTranspose, sizeof(opNoTranspose));
 

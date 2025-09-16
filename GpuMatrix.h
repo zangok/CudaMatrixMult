@@ -90,6 +90,12 @@ public:
     size_t numCols() const { return numCols_; }
     size_t totalElements() const { return numRows_ * numCols_; }
 
+    std::vector<T> to_host() const {
+        std::vector<T> h_data(numRows_ * numCols_);
+        cudaMemcpy(h_data.data(), d_data_, numRows_ * numCols_ * sizeof(T), cudaMemcpyDeviceToHost);
+        return h_data;
+    }
+
 private:
     T* d_data_ = nullptr; // Device pointer
     size_t numRows_;

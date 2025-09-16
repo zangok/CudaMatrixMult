@@ -19,7 +19,7 @@ struct GemmPolicy {
     using compute_type = float;
 
     __host__ __device__ static compute_type multiply_accumulate(
-        const a_value_type&, const b_value_type&, c_value_type&)
+        const a_value_type&, const b_value_type&, compute_type&)
     {
         static_assert(sizeof(Derived) == -1,
             "Derived policy must implement multiply_accumulate");
@@ -43,7 +43,7 @@ struct GemmPolicyBF16 : public GemmPolicy<GemmPolicyBF16> {
     using compute_type = float;
 
     __host__ __device__ static compute_type multiply_accumulate(
-        const a_value_type& a, const b_value_type& b, c_value_type& sum)
+        const a_value_type& a, const b_value_type& b, compute_type& sum)
     {
         float result = __bfloat162float(sum)
             + __bfloat162float(a) * __bfloat162float(b);
