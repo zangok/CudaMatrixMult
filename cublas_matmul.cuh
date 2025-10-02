@@ -1,78 +1,97 @@
-//Taken from the example implementation project on github
 #pragma once
 #include <cuda_runtime.h>
 #include <cublasLt.h>
+#include <cuda_bf16.h>
+#include <iostream>
+#include <stdexcept>
 #include "cublas_utils.cuh"
 
-// Random code snippets to use while development
-const size_t cublaslt_workspace_size = 32 * 1024 * 1024;
-void* cublaslt_workspace = NULL;
-cublasLtHandle_t cublaslt_handle;
+//RAII Wrapper for cuBLASLt
+struct CublasLtContext {
+    cublasLtHandle_t handle;
+    void* workspace = nullptr;
+    size_t workspace_size = 32 * 1024 * 1024; 
 
-void initCublasLt() {
-    cublasLtCreate(&cublaslt_handle);
-    CUDA_CHECK(cudaMalloc(&cublaslt_workspace, cublaslt_workspace_size));
-}
-
-void runCublasMatmulBF16(int M, int N, int K, bf16* A, bf16* B, bf16* C) {
-    // check alignment (some modes work unaligned but it always best to be aligned for performance)
-    if (((uintptr_t)A % 16) != 0 || ((uintptr_t)B % 16) != 0 || ((uintptr_t)C % 16) != 0) {
-        printf("All cuBLASLt pointers must be aligned!\n");
-        exit(EXIT_FAILURE);
+    CublasLtContext() {
+        CUBLAS_CHECK(cublasLtCreate(&handle));
+        CUDA_CHECK(cudaMalloc(&workspace, workspace_size));
     }
 
-    // create the operation descriptor
-    cublasLtMatmulDesc_t operationDesc;
-    cublasLtMatmulDescCreate(&operationDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F);
+    ~CublasLtContext() {
+        if (workspace) cudaFree(workspace);
+        cublasLtDestroy(handle);
+    }
 
-    int returnedResults = 0;
+    CublasLtContext(const CublasLtContext&) = delete;
+    CublasLtContext& operator=(const CublasLtContext&) = delete;
+};
+
+// cuBLASLt GEMM Runner
+inline void runCublasLtBF16Gemm(int M, int N, int K,
+    bf16* A, bf16* B, bf16* C,
+    float alpha = 1.0f, float beta = 0.0f)
+{
+    static thread_local CublasLtContext ctx;
+    // 1. Create operation descriptor
+    cublasLtMatmulDesc_t opDesc;
+    CUBLAS_CHECK(cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
+
+    cublasOperation_t opN = CUBLAS_OP_N;
+    CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_TRANSA, &opN, sizeof(opN)));
+    CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_TRANSB, &opN, sizeof(opN)));
+
+    // Scale type
+    cublasDataType_t scale_type = CUDA_R_32F;
+    CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_SCALE_TYPE, &scale_type, sizeof(scale_type)));
+
+    // 2. Create matrix layouts
+    cublasLtMatrixLayout_t layoutA, layoutB, layoutC;
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&layoutA, CUDA_R_16BF, M, K, M));
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&layoutB, CUDA_R_16BF, K, N, K));
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&layoutC, CUDA_R_16BF, M, N, M));
+
+    // 3. Create preference object
     cublasLtMatmulPreference_t preference;
+    CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+    CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(
+        preference,
+        CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+        &ctx.workspace_size,
+        sizeof(ctx.workspace_size)
+    ));
+
+    // 4. Pick algorithm heuristically
     cublasLtMatmulHeuristicResult_t heuristic;
+    int returnedResults = 0;
+    CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        ctx.handle, opDesc,
+        layoutA, layoutB, layoutC, layoutC,
+        preference,
+        1, &heuristic, &returnedResults
+    ));
+    if (returnedResults == 0) {
+        throw std::runtime_error("No suitable cuBLASLt algorithm found.");
+    }
 
-    cublasOperation_t opNoTranspose = CUBLAS_OP_T;
-    cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSA, &opNoTranspose, sizeof(opNoTranspose));
-    cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &opNoTranspose, sizeof(opNoTranspose));
+    // 5. Run GEMM
+    CUBLAS_CHECK(cublasLtMatmul(
+        ctx.handle,
+        opDesc,
+        &alpha,
+        A, layoutA,
+        B, layoutB,
+        &beta,
+        C, layoutC,
+        C, layoutC, // Output
+        &heuristic.algo,
+        ctx.workspace, ctx.workspace_size,
+        0
+    ));
 
-    // define matrix layouts
-    cublasLtMatrixLayout_t ALayout;
-    cublasLtMatrixLayout_t BLayout;
-    cublasLtMatrixLayout_t CLayout;
-    cublasLtMatrixLayoutCreate(&ALayout, CUDA_R_16BF, M, K, M);
-    cublasLtMatrixLayoutCreate(&BLayout, CUDA_R_16BF, K, N, K);
-
-    // cuBLASLt requires C in FP8 mode to be BF16 or FP32... (sigh)
-    cublasLtMatrixLayoutCreate(&CLayout, CUDA_R_16BF, M, N, M);
-
-    // create a preference handle with specified max workspace
-    cublasLtMatmulPreferenceCreate(&preference);
-    cublasLtMatmulPreferenceSetAttribute(preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
-        &cublaslt_workspace_size, sizeof(cublaslt_workspace_size));
-
-        // set scale type to FP32 (needs to be FP16 if and only if using CUBLAS_COMPUTE_16F, so it's FP32 even for FP8!)
-        cublasDataType_t scale_type = CUDA_R_32F;
-        cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_SCALE_TYPE, &scale_type, sizeof(scale_type));
-
-        // find a suitable algorithm (cached internally so shouldn't take much CPU time in practice)
-        cublasLtMatmulAlgoGetHeuristic(cublaslt_handle, operationDesc, ALayout, BLayout, CLayout, CLayout,
-            preference, 1, &heuristic, &returnedResults);
-        if (returnedResults == 0) {
-            printf("No cuBLASLt algorithm: m: %d, n: %d, k: %d", N, M, K);
-            exit(EXIT_FAILURE);
-        }
-
-        // set whether to accumulate (i.e. D += C) or not - note this isn't considered in algorithm selection (?!)
-        float alpha = 1, beta = 0;
-
-        // call the matmul
-        cublasLtMatmul(cublaslt_handle, operationDesc,
-            &alpha, A, ALayout, B, BLayout, &beta, C, CLayout, C, CLayout,
-            &heuristic.algo, cublaslt_workspace, cublaslt_workspace_size, 0);
-
-            // cleanups
-            cublasLtMatmulPreferenceDestroy(preference);
-            cublasLtMatmulDescDestroy(operationDesc);
-            cublasLtMatrixLayoutDestroy(ALayout);
-            cublasLtMatrixLayoutDestroy(BLayout);
-            cublasLtMatrixLayoutDestroy(CLayout);
-            CUDA_CHECK(cudaGetLastError());
+    // 6. Clean up
+    CUBLAS_CHECK(cublasLtMatmulPreferenceDestroy(preference));
+    CUBLAS_CHECK(cublasLtMatmulDescDestroy(opDesc));
+    CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(layoutA));
+    CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(layoutB));
+    CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(layoutC));
 }

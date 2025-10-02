@@ -7,10 +7,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CudaMatrixMult", "CudaMatri
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
+		benchmark.h = benchmark.h
 		cublas_matmul.cuh = cublas_matmul.cuh
 		cublas_utils.cuh = cublas_utils.cuh
 		GpuMatrix.h = GpuMatrix.h
 		utils.cuh = utils.cuh
+		kernels.cuh = kernels.cuh
+		validation.h = validation.h
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "policies", "policies", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
@@ -20,7 +23,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "policies", "policies", "{02
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "matmuls", "matmuls", "{5561DA70-8BC2-4554-BEDB-1BB233F76988}"
 	ProjectSection(SolutionItems) = preProject
+		custom_matmul_1.cuh = custom_matmul_1.cuh
 		custom_matmul_2.cuh = custom_matmul_2.cuh
+		custom_matmul_3.cuh = custom_matmul_3.cuh
 	EndProjectSection
 EndProject
 Global

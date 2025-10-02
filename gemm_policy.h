@@ -45,10 +45,12 @@ struct GemmPolicyBF16 : public GemmPolicy<GemmPolicyBF16> {
     __host__ __device__ static compute_type multiply_accumulate(
         const a_value_type& a, const b_value_type& b, compute_type& sum)
     {
-        float result = __bfloat162float(sum)
-            + __bfloat162float(a) * __bfloat162float(b);
-        sum = __float2bfloat16(result);
-        return result;
+        float a_float = __bfloat162float(a);
+        float b_float = __bfloat162float(b);
+
+        sum += a_float * b_float;
+
+        return sum; 
     }
 
     __host__ __device__ static compute_type multiply(
