@@ -29,13 +29,11 @@ ValidationResult<T> validate_results(const GpuMatrix<T>& C_ref, const GpuMatrix<
 
         max_abs_err = std::max(max_abs_err, abs_err);
         max_rel_err = std::max(max_rel_err, rel_err);
-    }
 
-    /*std::cout << kernel_name
-        << " | Max Abs Err: " << max_abs_err
-        << " | Max Rel Err: " << max_rel_err
-        << (max_rel_err < 1e-2f ? "valid" : "not valid")
-        << "\n";*/
+        //if(max_abs_err > 1e-1f || max_rel_err > 1e-1f) {
+        //    std::cout << "Ref: " << ref << ", Test: " << test << "\n";
+		//}
+    }
 
     return { max_abs_err, max_rel_err, max_rel_err < 1e-2f };
 

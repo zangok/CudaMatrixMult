@@ -34,7 +34,7 @@ inline void runCublasLtBF16Gemm(int M, int N, int K,
     static thread_local CublasLtContext ctx;
     // 1. Create operation descriptor
     cublasLtMatmulDesc_t opDesc;
-    CUBLAS_CHECK(cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
+    CUBLAS_CHECK(cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32F, CUDA_R_16F));
 
     cublasOperation_t opN = CUBLAS_OP_N;
     CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_TRANSA, &opN, sizeof(opN)));
